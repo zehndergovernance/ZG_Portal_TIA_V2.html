@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transfer Impact Modul — Zehnder Governance</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{--ink:#07100a;--forest:#0b1f12;--pine:#132d1a;--moss:#245430;--gold:#c08c28;--gold-l:#d4a94a;--border:rgba(192,140,40,.13);--r:10px;
+--risk-low:#27ae60;--risk-med:#e67e22;--risk-high:#c0392b;--risk-crit:#7b0000;}
+*{box-sizing:border-box;margin:0;padding:0;}html{scroll-behavior:smooth;}
+body{background:var(--ink);color:#fff;font-family:'Outfit',sans-serif;min-height:100vh;line-height:1.6;}
+a{text-decoration:none;color:inherit;}
+
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--ink);z-index:9998;display:flex;align-items:center;justify-content:center;}
+#loading.gone{display:none;}
+.spin{width:32px;height:32px;border:2.5px solid rgba(192,140,40,.2);border-top-color:var(--gold);border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* AUTH */
+#auth{position:fixed;inset:0;background:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+#auth.gone{display:none;}
+.abox{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:420px;width:100%;text-align:center;}
+.alogo{font-family:'Cormorant Garamond',serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:24px;}
+.abox h2{font-family:'Cormorant Garamond',serif;font-size:24px;margin-bottom:6px;}
+.abox p{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:24px;line-height:1.6;}
+.ainput{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:11px 14px;font-size:14px;color:#fff;font-family:'Outfit',sans-serif;margin-bottom:10px;outline:none;}
+.ainput:focus{border-color:rgba(192,140,40,.4);}
+.ainput::placeholder{color:rgba(255,255,255,.3);}
+.abtn{width:100%;background:var(--gold);color:var(--ink);border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;}
+.abtn:hover{background:var(--gold-l);}
+.aerr{font-size:12px;color:#e07070;margin-top:6px;display:none;}
+.adiv{border:none;border-top:1px solid rgba(255,255,255,.08);margin:18px 0;}
+.ainfo{font-size:12px;color:rgba(255,255,255,.3);line-height:1.6;}
+.ainfo a{color:var(--gold);}
+.noaccess{text-align:center;}
+.noaccess .big{font-size:48px;margin-bottom:16px;}
+.noaccess h2{font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:8px;}
+.noaccess p{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:20px;}
+.buybtn{display:inline-block;background:var(--gold);color:var(--ink);padding:11px 24px;border-radius:8px;font-size:14px;font-weight:600;}
+
+/* HEADER */
+header{background:rgba(11,31,18,.98);border-bottom:1px solid var(--border);padding:0 24px;height:58px;display:flex;align-items:center;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.lm{width:32px;height:32px;border-radius:7px;background:linear-gradient(145deg,var(--moss),var(--pine));display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;color:var(--gold);}
+.ln{font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:600;}.ln em{color:var(--gold);font-style:normal;}
+.hplan{margin-left:10px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(192,140,40,.12);color:var(--gold);border:1px solid rgba(192,140,40,.2);}
+.hr{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.hback{font-size:12px;color:rgba(255,255,255,.35);padding:5px 10px;border:1px solid rgba(255,255,255,.08);border-radius:6px;}
+.hout{font-size:12px;color:rgba(255,255,255,.25);padding:5px 10px;border:1px solid rgba(255,255,255,.06);border-radius:6px;cursor:pointer;background:none;font-family:'Outfit',sans-serif;}
+#uemail{font-size:11px;color:rgba(255,255,255,.25);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* LAYOUT */
+.wrap{max-width:960px;margin:0 auto;padding:28px 20px 64px;}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,rgba(19,45,26,.9),rgba(11,31,18,.98));border:1px solid var(--border);border-radius:14px;padding:28px 32px;margin-bottom:24px;}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(22px,2.5vw,30px);font-weight:600;margin-bottom:8px;}
+.hero .lead{font-size:14px;color:rgba(255,255,255,.5);line-height:1.7;font-weight:300;margin-bottom:0;}
+.htag{display:inline-flex;align-items:center;gap:6px;background:rgba(192,140,40,.1);border:1px solid rgba(192,140,40,.2);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:14px;}
+
+/* STEPS */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+.step{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:16px;text-align:center;}
+.step-n{width:28px;height:28px;border-radius:50%;background:var(--moss);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;}
+.step-t{font-size:12.5px;font-weight:600;color:#fff;margin-bottom:3px;}
+.step-d{font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;}
+.step-arr{position:absolute;right:-10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.2);font-size:14px;}
+
+/* WHAT IS TIA */
+.info-box{background:rgba(36,84,48,.1);border:1px solid rgba(36,84,48,.25);border-radius:var(--r);padding:18px 22px;margin-bottom:24px;display:flex;gap:16px;align-items:flex-start;}
+.info-icon{font-size:28px;flex-shrink:0;margin-top:2px;}
+.info-t{font-size:14px;font-weight:600;color:#fff;margin-bottom:4px;}
+.info-d{font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;font-weight:300;}
+
+/* COUNTRY GRID */
+.sh{font-size:10.5px;color:var(--gold);font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06);}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:32px;}
+.ccard{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:16px 18px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.ccard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+.ccard.low::before{background:var(--risk-low);}
+.ccard.med::before{background:var(--risk-med);}
+.ccard.high::before{background:var(--risk-high);}
+.ccard.crit::before{background:var(--risk-crit);}
+.ccard:hover{border-color:rgba(192,140,40,.3);transform:translateY(-2px);background:rgba(255,255,255,.05);}
+.ccard.active{border-color:rgba(192,140,40,.4);background:rgba(192,140,40,.06);}
+.ctop{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.cflag{font-size:22px;}
+.cname{font-size:14px;font-weight:600;color:#fff;flex:1;margin:0 8px;}
+.cscore{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;}
+.cscore.low{background:rgba(39,174,96,.15);color:#6ecf90;}
+.cscore.med{background:rgba(230,126,34,.15);color:#f39c12;}
+.cscore.high{background:rgba(192,57,43,.15);color:#e74c3c;}
+.cscore.crit{background:rgba(123,0,0,.25);color:#ff6b6b;}
+.claw{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;}
+.csummary{font-size:11.5px;color:rgba(255,255,255,.5);line-height:1.5;font-weight:300;}
+.caction{margin-top:10px;font-size:11px;font-weight:600;color:var(--gold);}
+
+/* DETAIL PANEL */
+#detail{display:none;background:rgba(255,255,255,.03);border:1px solid rgba(192,140,40,.2);border-radius:14px;padding:24px 28px;margin-bottom:28px;}
+#detail.show{display:block;}
+.dtop{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:20px;flex-wrap:wrap;}
+.dflag{font-size:40px;}
+.dname{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#fff;}
+.dlaw{font-size:12px;color:rgba(255,255,255,.4);margin-top:3px;}
+.dscore-block{text-align:right;}
+.dscore-n{font-size:36px;font-weight:700;}
+.dscore-n.low{color:var(--risk-low);}
+.dscore-n.med{color:var(--risk-med);}
+.dscore-n.high{color:var(--risk-high);}
+.dscore-n.crit{color:#ff6b6b;}
+.dscore-l{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;}
+.drisk-label{font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px;margin-top:4px;display:inline-block;}
+.drisk-label.low{background:rgba(39,174,96,.15);color:#6ecf90;}
+.drisk-label.med{background:rgba(230,126,34,.15);color:#f39c12;}
+.drisk-label.high{background:rgba(192,57,43,.15);color:#e74c3c;}
+.drisk-label.crit{background:rgba(123,0,0,.2);color:#ff6b6b;}
+
+.dbar-wrap{margin-bottom:20px;}
+.dbar-l{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px;}
+.dbar{height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.dbar-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+.dbar-fill.low{background:var(--risk-low);}
+.dbar-fill.med{background:var(--risk-med);}
+.dbar-fill.high{background:var(--risk-high);}
+.dbar-fill.crit{background:#ff6b6b;}
+
+.dfacts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.dfact{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px;text-align:center;}
+.dfact-l{font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+.dfact-v{font-size:13px;font-weight:600;color:#fff;}
+
+.danalysis{font-size:13px;color:rgba(255,255,255,.55);line-height:1.7;font-weight:300;margin-bottom:20px;padding:16px;background:rgba(255,255,255,.03);border-radius:8px;border-left:3px solid var(--gold);}
+
+.dmeasures{margin-bottom:20px;}
+.dmeasures-t{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+.dmeasure{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:rgba(255,255,255,.6);margin-bottom:6px;line-height:1.5;}
+.dmeasure::before{content:'✓';color:var(--risk-low);font-weight:700;flex-shrink:0;margin-top:1px;}
+
+/* DOWNLOAD */
+.ddownload{background:rgba(192,140,40,.08);border:1px solid rgba(192,140,40,.2);border-radius:10px;padding:20px 22px;}
+.ddownload-t{font-size:15px;font-weight:600;color:#fff;margin-bottom:6px;}
+.ddownload-d{font-size:13px;color:rgba(255,255,255,.45);line-height:1.5;margin-bottom:14px;font-weight:300;}
+.dbtn-row{display:flex;gap:10px;flex-wrap:wrap;}
+.dbtn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+.dbtn-de{background:rgba(39,174,96,.12);border:1px solid rgba(39,174,96,.25);color:#6ecf90;}
+.dbtn-de:hover{background:#6ecf90;color:var(--ink);}
+.dbtn-en{background:rgba(192,140,40,.1);border:1px solid rgba(192,140,40,.25);color:var(--gold-l);}
+.dbtn-en:hover{background:var(--gold);color:var(--ink);}
+.dnote{font-size:11.5px;color:rgba(255,255,255,.3);margin-top:10px;line-height:1.5;}
+.dfill-steps{margin-top:14px;padding:14px 16px;background:rgba(255,255,255,.03);border-radius:8px;}
+.dfill-t{font-size:12px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
+.dfill-item{display:flex;gap:8px;font-size:12.5px;color:rgba(255,255,255,.5);margin-bottom:5px;}
+.dfill-n{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.08);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:rgba(255,255,255,.5);}
+
+/* GENERAL */
+.close-btn{background:none;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Outfit',sans-serif;}
+.close-btn:hover{border-color:rgba(255,255,255,.25);color:rgba(255,255,255,.6);}
+
+/* UPSELL */
+.upsell{background:rgba(192,140,40,.05);border:1px solid rgba(192,140,40,.15);border-radius:var(--r);padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px;}
+.upsell h3{font-family:'Cormorant Garamond',serif;font-size:17px;color:#fff;margin-bottom:3px;}
+.upsell p{font-size:12.5px;color:rgba(255,255,255,.4);font-weight:300;}
+.ubtn{background:var(--gold);color:var(--ink);padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;white-space:nowrap;}
+
+/* STATUS */
+.sbar{background:rgba(36,84,48,.12);border:1px solid rgba(36,84,48,.25);border-radius:8px;padding:9px 14px;margin-bottom:20px;display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.5);}
+.sdot{width:6px;height:6px;border-radius:50%;background:#6ecf90;flex-shrink:0;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+@media(max-width:700px){
+.steps{grid-template-columns:1fr 1fr;}
+.dfacts{grid-template-columns:1fr 1fr;}
+.dtop{flex-direction:column;}
+.dscore-block{text-align:left;}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spin"></div></div>
+
+<div id="auth">
+  <div class="abox">
+    <div class="alogo">Zehnder Governance</div>
+    <div id="loginBox">
+      <h2>Transfer Impact Modul</h2>
+      <p>Melden Sie sich an um auf die Länderprofile und vorausgefüllten TIA-Dokumente zuzugreifen.</p>
+      <input type="email" id="emailIn" class="ainput" placeholder="E-Mail-Adresse">
+      <input type="password" id="passIn" class="ainput" placeholder="Passwort">
+      <div class="aerr" id="aerr"></div>
+      <button class="abtn" onclick="doLogin()">Einloggen →</button>
+      <div class="adiv"></div>
+      <div class="ainfo">Noch kein Zugang? <a href="https://buy.stripe.com/eVq28jeRMggpfetdjG5Rm04">Transfer Impact Modul — CHF 299 (12 Monate) →</a></div>
+    </div>
+    <div id="noBox" class="noaccess" style="display:none">
+      <div class="big">🔒</div>
+      <h2>Kein Zugang</h2>
+      <p>Ihr Account hat kein aktives Transfer Impact Modul oder keine Flatrate.</p>
+      <a href="https://buy.stripe.com/eVq28jeRMggpfetdjG5Rm04" class="buybtn">TIA Modul — CHF 299 →</a>
+      <div class="adiv"></div>
+      <div class="ainfo"><span style="cursor:pointer;color:var(--gold);" onclick="doLogout()">Anderes Konto</span></div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <a href="https://zehndergovernance.com" class="logo"><div class="lm">Z</div><div class="ln">ZEHNDER <em>GOVERNANCE</em></div></a>
+  <span class="hplan">Transfer Impact Modul</span>
+  <div class="hr">
+    <span id="uemail"></span>
+    <a href="https://zg-portal-auswahl.vercel.app" class="hback">← Mein Portal</a>
+    <button class="hout" onclick="doLogout()">Ausloggen</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="htag">🌍 Transfer Impact Modul · 12 Monate Zugang</div>
+    <h1>Internationaler Datentransfer —<br>rechtssicher in 20 Minuten</h1>
+    <p class="lead">Daten in die USA, China oder andere Länder transferieren ist seit Schrems II nur noch legal mit einem dokumentierten Transfer Impact Assessment (TIA). Wir liefern die Länderanalyse fertig — Sie ergänzen Ihre Transfer-Details.</p>
+  </div>
+
+  <!-- WHAT IS TIA -->
+  <div class="info-box">
+    <div class="info-icon">💡</div>
+    <div>
+      <div class="info-t">Was ist ein Transfer Impact Assessment (TIA)?</div>
+      <div class="info-d">Seit dem Schrems II-Urteil (2020) und dem neuen nDSG (2023) müssen Sie vor jedem Datentransfer in Länder ohne Angemessenheitsbeschluss prüfen, ob dort ein gleichwertiges Schutzniveau besteht. Diese Prüfung — das TIA — muss schriftlich dokumentiert werden. Fehlt das TIA, ist der Transfer rechtswidrig. Beim Anwalt kostet ein TIA CHF 500–2'000 pro Land. Hier erhalten Sie die Länderanalyse fertig vorausgefüllt — Sie müssen nur noch Ihre 5 unternehmensspezifischen Details ergänzen.</div>
+    </div>
+  </div>
+
+  <!-- STEPS -->
+  <div class="sh">So funktioniert es — 4 einfache Schritte</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-t">Land wählen</div>
+      <div class="step-d">Klicken Sie auf das Zielland Ihres Datentransfers. Sie sehen sofort den Risikoscore und die rechtliche Situation.</div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-t">Dokument laden</div>
+      <div class="step-d">Laden Sie das vorausgefüllte Word-Dokument herunter. Schritt 2 (Länderanalyse) ist bereits fertig ausgefüllt.</div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-t">Details ergänzen</div>
+      <div class="step-d">Füllen Sie Ihre 5 Transfer-Details aus: Welche Daten? An wen? Welchem Zweck? Welche Massnahmen? (ca. 15–20 Min.)</div>
+    </div>
+    <div class="step">
+      <div class="step-n">4</div>
+      <div class="step-t">Fertiges TIA</div>
+      <div class="step-d">Ihr TIA ist rechtssicher dokumentiert und bei Kontrollen durch EDÖB, CNIL oder andere Behörden vorzeigbar.</div>
+    </div>
+  </div>
+
+  <div class="sbar"><div class="sdot"></div>Alle Länderprofile aktualisiert März 2026. Updates inklusive für 12 Monate.</div>
+
+  <!-- COUNTRIES WITH ADEQUACY DECISION -->
+  <div class="sh">✅ Länder mit Angemessenheitsbeschluss — kein TIA erforderlich</div>
+  <div style="background:rgba(39,174,96,.06);border:1px solid rgba(39,174,96,.18);border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:rgba(255,255,255,.55);line-height:1.6;">
+    <strong style="color:#6ecf90;">Kein TIA nötig</strong> für Länder mit EU-Angemessenheitsbeschluss: 🇮🇸 Island · 🇱🇮 Liechtenstein · 🇳🇴 Norwegen · 🇨🇭 Schweiz (unter DSGVO) · 🇬🇧 UK (unter DSGVO) · 🇦🇩 Andorra · 🇦🇷 Argentinien · 🇨🇦 Kanada (kommerziell) · 🇫🇴 Faröer · 🇬🇬 Guernsey · 🇮🇱 Israel · 🇮🇲 Isle of Man · 🇯🇵 Japan · 🇯🇪 Jersey · 🇳🇿 Neuseeland · 🇺🇾 Uruguay. <br>Hinweis: USA → EU-US Data Privacy Framework (2023) bietet Angemessenheitsbeschluss <em>nur für zertifizierte Unternehmen</em>. TIA trotzdem empfohlen als Backup-Dokumentation.
+  </div>
+
+  <!-- COUNTRIES NEEDING TIA -->
+  <div class="sh">⚠️ TIA-pflichtige Länder — Vorausgefüllte Dokumente verfügbar</div>
+  <div class="cgrid" id="countryGrid"></div>
+
+  <!-- DETAIL PANEL -->
+  <div id="detail">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;">Länderprofil & TIA-Dokument</div>
+      <button class="close-btn" onclick="closeDetail()">✕ Schliessen</button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+
+  <!-- GENERAL TEMPLATE -->
+  <div class="sh">📄 Allgemeine TIA-Vorlage (für andere Länder)</div>
+  <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:18px 22px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+    <div>
+      <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:4px;">TIA Framework Vorlage — alle Länder</div>
+      <div style="font-size:12.5px;color:rgba(255,255,255,.45);line-height:1.5;font-weight:300;">Leere Vorlage mit dem 5-Schritte-TIA-Prozess nach EDPB-Empfehlung 01/2020 — für Länder die nicht in unserer Länderliste sind (z.B. Malaysia, Thailand, Ägypten etc.).</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="https://drive.google.com/file/d/1zwTmbdue-EKoISfUdcrF8sXtmTSbFCv7/view" target="_blank" class="dbtn dbtn-de">↓ Vorlage DE</a>
+      <a href="https://drive.google.com/file/d/12RUqDq2OAF7MvV_F-QmIc_-QogyN1gsH/view" target="_blank" class="dbtn dbtn-en">↓ Vorlage EN</a>
+    </div>
+  </div>
+
+  <!-- EU SCCs -->
+  <div class="sh">📋 Begleitdokumente für internationale Transfers</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:32px;">
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px;">
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">🇪🇺 EU SCCs Modul 1 (C2C)</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px;">Controller zu Controller — kommentiert</div>
+      <div style="display:flex;gap:6px;">
+        <a href="https://drive.google.com/file/d/1WplESCL_lfxRNKJtd06YtNF8i133RPuY/view" target="_blank" class="dbtn dbtn-de" style="padding:6px 12px;font-size:11.5px;">↓ DE</a>
+        <a href="https://drive.google.com/file/d/1MQGzVzaS7FKfZJni7wDu1XhhJ2cceR5y/view" target="_blank" class="dbtn dbtn-en" style="padding:6px 12px;font-size:11.5px;">↓ EN</a>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px;">
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">🇪🇺 EU SCCs Modul 2 (C2P)</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px;">Controller zu Processor — kommentiert</div>
+      <div style="display:flex;gap:6px;">
+        <a href="https://drive.google.com/file/d/1g85x_TPFyPhdoZ6n6dCQFHQntTb_nUBg/view" target="_blank" class="dbtn dbtn-de" style="padding:6px 12px;font-size:11.5px;">↓ DE</a>
+        <a href="https://drive.google.com/file/d/12_XGhT-YkpfiORUbp0g5xj1qeRAXHKBu/view" target="_blank" class="dbtn dbtn-en" style="padding:6px 12px;font-size:11.5px;">↓ EN</a>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px;">
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">🇬🇧 UK IDTA Template</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px;">International Data Transfer Agreement (UK)</div>
+      <div style="display:flex;gap:6px;">
+        <a href="https://drive.google.com/file/d/1_tTgho9rvp7p5y3UkUpiepJviyJmcu_6/view" target="_blank" class="dbtn dbtn-en" style="padding:6px 12px;font-size:11.5px;">↓ EN</a>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px;">
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">🇨🇭 CH Standardklauseln (EDÖB)</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px;">Schweizer Standarddatenschutzklauseln</div>
+      <div style="display:flex;gap:6px;">
+        <a href="https://drive.google.com/file/d/1m_MlLxOtZaV302Olr8Px-Ak9yc_lyI6x/view" target="_blank" class="dbtn dbtn-de" style="padding:6px 12px;font-size:11.5px;">↓ DE</a>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:14px 16px;">
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">🗺️ Transfer-Mechanismen Entscheidungsbaum</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px;">Welcher Mechanismus gilt für welches Land?</div>
+      <div style="display:flex;gap:6px;">
+        <a href="https://drive.google.com/file/d/1oAYHE2XSWhzyYCkutzONxwngKYJgttzC/view" target="_blank" class="dbtn dbtn-de" style="padding:6px 12px;font-size:11.5px;">↓ DE</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPSELL -->
+  <div class="upsell">
+    <div>
+      <h3>🧭 Compliance Navigator — Gesamtanalyse</h3>
+      <p>Haben Sie bereits ein vollständiges Bild Ihrer Compliance-Lücken? Der Navigator analysiert Ihre gesamte Organisation — inkl. welche Transfers noch TIAs brauchen.</p>
+    </div>
+    <a href="https://buy.stripe.com/5kQ3cneRM2pz7M10wU5Rm02" class="ubtn">Navigator — CHF 490 →</a>
+  </div>
+
+  <!-- SUPPORT -->
+  <div style="text-align:center;font-size:13px;color:rgba(255,255,255,.3);">
+    Fragen zum TIA-Prozess? <a href="mailto:zehndergovernance@gmail.com?subject=TIA Frage" style="color:var(--gold);">zehndergovernance@gmail.com</a>
+  </div>
+
+</div>
+
+<script>
+const SB_URL='https://rjvdmyjuqtchznlhffzo.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqdmRteWp1cXRjaHpubGhmZnpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNTkzNDksImV4cCI6MjA4NjkzNTM0OX0.iJWzPFxAI-ms7qCD6s0-Sxuqksy0ix1X-l1uNmxCZu0';
+const PLANS=['tia','standard','enterprise'];
+const {createClient}=supabase;
+const sb=createClient(SB_URL,SB_KEY);
+
+// Country data
+const countries=[
+  {
+    id:'usa',flag:'🇺🇸',name:'USA',law:'FISA 702 · Cloud Act · ECPA',
+    score:22,max:40,level:'high',riskLabel:'Erhöht',
+    summary:'Trotz EU-US DPF (2023): Nachrichtendienstliche Zugriffe durch NSA/FBI bleiben möglich. TIA empfohlen auch bei DPF-zertifizierten Empfängern.',
+    analysis:'Die USA verfügen seit dem EU-US Data Privacy Framework (Juli 2023) über einen Angemessenheitsbeschluss — jedoch nur für zertifizierte Unternehmen. Für nicht-zertifizierte Empfänger und für Transfers unter dem nDSG (CH) ist ein TIA weiterhin erforderlich. FISA Section 702 erlaubt nachrichtendienstliche Massenüberwachung ohne richterliche Einzelgenehmigung. Der EuGH prüft das DPF aktuell erneut (Schrems III-Klage eingereicht 2023). Zusätzliche Schutzklauseln werden empfohlen.',
+    adequacy:'Bedingt (DPF)',
+    mechanisms:'SCCs + TIA oder DPF-Zertifizierung',
+    mainRisk:'FISA 702 / Cloud Act Zugriff',
+    measures:[
+      'EU-SCCs Modul 2 abschliessen',
+      'Prüfen ob Empfänger DPF-zertifiziert (dpf.gov)',
+      'Verschlüsselung vor Transfer sicherstellen',
+      'Vertraglich pseudonymisierte Daten wo möglich',
+      'Monitoring DPF-Status des Empfängers jährlich'
+    ],
+    docs:{de:'https://drive.google.com/file/d/1YvGwBpnQiq2z3E0b7-Plttc-5EUejV-S/view',en:'https://drive.google.com/file/d/1_4J_yeJS2Va75N9n_KMCKuQFVKKmtNFU/view'}
+  },
+  {
+    id:'china',flag:'🇨🇳',name:'China',law:'PIPL · CSL · DSL · CAC-Vorschriften',
+    score:36,max:40,level:'crit',riskLabel:'Kritisch',
+    summary:'Kein Angemessenheitsbeschluss. Staatliche Überwachungspflichten. SCCs und CAC-Sicherheitsbewertung erforderlich. Höchstes Risiko.',
+    analysis:'China ist das risikoreichste Land für Datentransfers. Das PIPL (2021) schreibt vor, dass Transfers ins Ausland eine der folgenden Bedingungen erfüllen müssen: Abschluss chinesischer Standard Contractual Clauses (CAC-SCCs), CAC-Sicherheitsbewertung oder Zertifizierung durch akkreditierte Stelle. Das Cybersecurity Law (CSL) und Data Security Law (DSL) ermöglichen weitgehende staatliche Zugriffsrechte ohne richterliche Kontrolle. Das Nationale Geheimdienstgesetz (Art. 7) verpflichtet alle Organisationen zur Kooperation mit Geheimdiensten.',
+    adequacy:'Nein',
+    mechanisms:'Chinesische SCCs + CAC-Bewertung',
+    mainRisk:'Staatliche Geheimdienstpflichten',
+    measures:[
+      'Chinesische SCC-Klauseln abschliessen (CAC-Vorlage)',
+      'CAC-Sicherheitsbewertung prüfen ob erforderlich',
+      'Transfer-Volumen minimieren — nur zwingend nötige Daten',
+      'Datenlokalisierung in CN prüfen als Alternative',
+      'Keine sensiblen Kategorien transferieren (Art. 9 PIPL)',
+      'PIPL-konformer Datenschutzhinweis für CN-Nutzer'
+    ],
+    docs:{de:'https://drive.google.com/file/d/1YvGwBpnQiq2z3E0b7-Plttc-5EUejV-S/view',en:'https://drive.google.com/file/d/1_4J_yeJS2Va75N9n_KMCKuQFVKKmtNFU/view'}
+  },
+  {
+    id:'india',flag:'🇮🇳',name:'Indien',law:'DPDPA 2023 · IT Act',
+    score:17,max:40,level:'med',riskLabel:'Mittel',
+    summary:'DPDPA (2023) in Kraft seit 2024. Noch kein Angemessenheitsbeschluss. EU-SCCs empfohlen. Risikoscore verbessert sich mit DPDPA-Umsetzung.',
+    analysis:'Indien hat 2023 den Digital Personal Data Protection Act (DPDPA) verabschiedet. Das Gesetz trat 2024 schrittweise in Kraft. Es sieht grundlegende Datenschutzrechte vor, enthält jedoch weitreichende staatliche Ausnahmen (Section 17). Ein EU-Angemessenheitsbeschluss ist noch nicht erteilt — EU-SCCs sind der empfohlene Mechanismus. Das Risiko ist mittel, da staatliche Zugriffsrechte breiter sind als in demokratischen Rechtsstaaten, aber enger als in China.',
+    adequacy:'Nein (DPDPA seit 2024)',
+    mechanisms:'EU-SCCs Modul 2',
+    mainRisk:'Staatliche Ausnahmen Section 17 DPDPA',
+    measures:[
+      'EU-SCCs Modul 2 abschliessen',
+      'Datenschutzhinweis für IN-Nutzer nach DPDPA',
+      'Consent-Management für IN-Nutzer prüfen',
+      'Monitoring: Angemessenheitsbeschluss erwartet 2025/26'
+    ],
+    docs:{de:'https://drive.google.com/file/d/1KrexvqhmfOyI0qDqn59sq7JjNgBc_BtY/view',en:'https://drive.google.com/file/d/1nENIsQMbv7-ilJQSX-8ldek7eDp1nEjJ/view'}
+  },
+  {
+    id:'brazil',flag:'🇧🇷',name:'Brasilien',law:'LGPD · Lei 13.709/2018',
+    score:14,max:40,level:'med',riskLabel:'Mittel',
+    summary:'LGPD (DSGVO-ähnlich) seit 2021 in Kraft. Kein Angemessenheitsbeschluss. EU-SCCs empfohlen. Überwachungsrisiko geringer als USA/China.',
+    analysis:'Das brasilianische Lei Geral de Proteção de Dados (LGPD, 2018/2021) ist stark an die DSGVO angelehnt. Die ANPD (Aufsichtsbehörde) ist aktiv und hat erste Bussgelder verhängt. Staatliche Überwachungsrisiken bestehen (Lei 9296), sind aber geringer als in autoritären Ländern. Für Transfers aus der EU sind EU-SCCs oder die Genehmigung der ANPD erforderlich. Ein Angemessenheitsbeschluss wird von der Europäischen Kommission geprüft.',
+    adequacy:'Nein (in Prüfung)',
+    mechanisms:'EU-SCCs Modul 2',
+    mainRisk:'Kein Angemessenheitsbeschluss',
+    measures:[
+      'EU-SCCs Modul 2 abschliessen',
+      'LGPD-konformer Datenschutzhinweis für BR-Nutzer',
+      'Monitoring: Angemessenheitsbeschluss in Prüfung'
+    ],
+    docs:{de:'https://drive.google.com/file/d/1KrexvqhmfOyI0qDqn59sq7JjNgBc_BtY/view',en:'https://drive.google.com/file/d/1nENIsQMbv7-ilJQSX-8ldek7eDp1nEjJ/view'}
+  },
+  {
+    id:'vietnam',flag:'🇻🇳',name:'Vietnam',law:'PDPD · Decree 13/2023',
+    score:27,max:40,level:'high',riskLabel:'Erhöht',
+    summary:'PDPD (2023) eingeführt. Staatliche Überwachungsrisiken erhöht. Lokalisierungspflichten für bestimmte Datentypen. EU-SCCs + TIA erforderlich.',
+    analysis:'Vietnam hat 2023 das Personal Data Protection Decree (PDPD) eingeführt — das erste umfassende Datenschutzgesetz des Landes. Es schreibt Datenlokalisierung für bestimmte kritische Daten vor (Art. 25 Cybersecurity Law). Staatliche Zugriffsrechte sind weit gefasst. Für Transfers aus der EU sind EU-SCCs der empfohlene Mechanismus, aber die Datenlokalisierungspflichten können Transfers faktisch einschränken. Risikoscore erhöht aufgrund mangelnder Gerichtsunabhängigkeit und weitgehender Staatszugriffsrechte.',
+    adequacy:'Nein',
+    mechanisms:'EU-SCCs Modul 2 + Lokalisierung prüfen',
+    mainRisk:'Staatliche Überwachung + Lokalisierungspflichten',
+    measures:[
+      'Datenlokalisierungspflichten VN prüfen (Cybersecurity Law Art. 25)',
+      'EU-SCCs Modul 2 abschliessen',
+      'Transfer-Umfang auf Minimum beschränken',
+      'Prüfen ob Empfänger unter Staatskontrolle'
+    ],
+    docs:{de:'https://drive.google.com/file/d/1KrexvqhmfOyI0qDqn59sq7JjNgBc_BtY/view',en:'https://drive.google.com/file/d/1nENIsQMbv7-ilJQSX-8ldek7eDp1nEjJ/view'}
+  },
+  {
+    id:'serbia',flag:'🇷🇸',name:'Serbien',law:'Zakon o zaštiti podataka o ličnosti',
+    score:8,max:40,level:'low',riskLabel:'Gering',
+    summary:'DSGVO-gleichwertiges Datenschutzgesetz. Angemessenheitsbeschluss der EU vorhanden. TIA optional als Backup-Dokumentation empfohlen.',
+    analysis:'Serbien verfügt über ein DSGVO-gleichwertiges Datenschutzgesetz und einen EU-Angemessenheitsbeschluss (seit 2013, bestätigt 2023). Überwachungsrisiken sind im europäischen Vergleich niedrig. Für reine EU-Transfers ist technisch kein TIA erforderlich — für Transfers unter dem nDSG (CH) empfehlen wir eine kurze TIA-Dokumentation. Das Risikoscore ist niedrig.',
+    adequacy:'Ja (EU-Angemessenheitsbeschluss)',
+    mechanisms:'Angemessenheitsbeschluss (kein TIA zwingend)',
+    mainRisk:'Niedrig — Backup-Dokumentation empfohlen',
+    measures:[
+      'Angemessenheitsbeschluss als Transfergrundlage dokumentieren',
+      'Für nDSG-Compliance: kurze TIA-Dokumentation empfohlen',
+      'Standard-AVV abschliessen'
+    ],
+    docs:{de:'https://drive.google.com/file/d/1b85qcXVX2kejVg6xhvHiS_UnAYmjSP0_/view',en:'https://drive.google.com/file/d/19QJAo7Xk9WX2RO1SViAH9JBwcm4PNOUe/view'}
+  }
+];
+
+function renderCountries(){
+  const grid=document.getElementById('countryGrid');
+  grid.innerHTML=countries.map(c=>`
+    <div class="ccard ${c.level}" onclick="showDetail('${c.id}')">
+      <div class="ctop">
+        <span class="cflag">${c.flag}</span>
+        <span class="cname">${c.name}</span>
+        <span class="cscore ${c.level}">${c.riskLabel}</span>
+      </div>
+      <div class="claw">${c.law}</div>
+      <div class="csummary">${c.summary}</div>
+      <div class="caction">→ Länderprofil & Dokument öffnen</div>
+    </div>
+  `).join('');
+}
+
+function showDetail(id){
+  const c=countries.find(x=>x.id===id);
+  if(!c)return;
+  document.querySelectorAll('.ccard').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.ccard').forEach(el=>{if(el.onclick.toString().includes(`'${id}'`))el.classList.add('active');});
+  const pct=Math.round((c.score/c.max)*100);
+  const html=`
+    <div class="dtop">
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div class="dflag">${c.flag}</div>
+        <div><div class="dname">${c.name}</div><div class="dlaw">${c.law}</div></div>
+      </div>
+      <div class="dscore-block">
+        <div class="dscore-n ${c.level}">${c.score}<span style="font-size:18px;opacity:.5;">/${c.max}</span></div>
+        <div class="dscore-l">Risikoscore (EDPB-Kriterien)</div>
+        <span class="drisk-label ${c.level}">${c.riskLabel}</span>
+      </div>
+    </div>
+    <div class="dbar-wrap">
+      <div class="dbar-l"><span>Risiko</span><span>${c.score}/${c.max}</span></div>
+      <div class="dbar"><div class="dbar-fill ${c.level}" style="width:${pct}%"></div></div>
+    </div>
+    <div class="dfacts">
+      <div class="dfact"><div class="dfact-l">Angemessenheit</div><div class="dfact-v" style="font-size:12px;">${c.adequacy}</div></div>
+      <div class="dfact"><div class="dfact-l">Mechanismus</div><div class="dfact-v" style="font-size:11px;">${c.mechanisms}</div></div>
+      <div class="dfact"><div class="dfact-l">Hauptrisiko</div><div class="dfact-v" style="font-size:11px;">${c.mainRisk}</div></div>
+    </div>
+    <div class="danalysis">${c.analysis}</div>
+    <div class="dmeasures">
+      <div class="dmeasures-t">Empfohlene Schutzmassnahmen</div>
+      ${c.measures.map(m=>`<div class="dmeasure">${m}</div>`).join('')}
+    </div>
+    <div class="ddownload">
+      <div class="ddownload-t">📄 Vorausgefülltes TIA-Dokument herunterladen</div>
+      <div class="ddownload-d">Das Dokument enthält die Länderanalyse (Schritt 2) bereits fertig ausgefüllt. Sie müssen nur noch Ihre 5 unternehmensspezifischen Details ergänzen.</div>
+      <div class="dbtn-row">
+        ${c.docs.de?`<a href="${c.docs.de}" target="_blank" class="dbtn dbtn-de">↓ TIA Vorlage DE herunterladen</a>`:''}
+        ${c.docs.en?`<a href="${c.docs.en}" target="_blank" class="dbtn dbtn-en">↓ TIA Template EN download</a>`:''}
+      </div>
+      <div class="dfill-steps">
+        <div class="dfill-t">Nach dem Download — Was Sie ausfüllen müssen (5 Felder):</div>
+        <div class="dfill-item"><div class="dfill-n">1</div><div><strong>Ihre Transfer-Details:</strong> Welche Personendaten? Von wem zu wem?</div></div>
+        <div class="dfill-item"><div class="dfill-n">2</div><div><strong>Bereits ausgefüllt von uns ✓</strong> — Rechtslage im Empfängerland</div></div>
+        <div class="dfill-item"><div class="dfill-n">3</div><div><strong>Ihre Schutzmassnahmen:</strong> Verschlüsselung, Pseudonymisierung, SCCs?</div></div>
+        <div class="dfill-item"><div class="dfill-n">4</div><div><strong>Wirksamkeitsbeurteilung:</strong> Sind die Massnahmen wirksam? (Kurzbeurteilung)</div></div>
+        <div class="dfill-item"><div class="dfill-n">5</div><div><strong>Entscheid:</strong> Transfer zulässig / zulässig mit Massnahmen / nicht zulässig</div></div>
+      </div>
+      <div class="dnote">⏱ Zeitaufwand: ca. 15–20 Minuten · Beim Anwalt: CHF 500–2'000 pro Land · Fragen? zehndergovernance@gmail.com</div>
+    </div>
+  `;
+  document.getElementById('detailContent').innerHTML=html;
+  const det=document.getElementById('detail');
+  det.classList.add('show');
+  setTimeout(()=>det.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+function closeDetail(){
+  document.getElementById('detail').classList.remove('show');
+  document.querySelectorAll('.ccard').forEach(el=>el.classList.remove('active'));
+}
+
+// AUTH
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){document.getElementById('uemail').textContent=session.user.email;await checkAccess(session.user.id);}
+  else{document.getElementById('loading').classList.add('gone');}
+}
+
+async function checkAccess(uid){
+  const {data}=await sb.from('user_subscriptions').select('plan,status').eq('user_id',uid).eq('status','active');
+  document.getElementById('loading').classList.add('gone');
+  const ok=data?.some(s=>PLANS.includes(s.plan));
+  if(ok){document.getElementById('auth').classList.add('gone');renderCountries();}
+  else{document.getElementById('loginBox').style.display='none';document.getElementById('noBox').style.display='block';}
+}
+
+async function doLogin(){
+  const email=document.getElementById('emailIn').value.trim();
+  const pw=document.getElementById('passIn').value;
+  const err=document.getElementById('aerr');
+  err.style.display='none';
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+  if(error){err.textContent='Anmeldung fehlgeschlagen.';err.style.display='block';return;}
+  document.getElementById('uemail').textContent=data.user.email;
+  await checkAccess(data.user.id);
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+init();
+</script>
+</body>
+</html>
