@@ -188,10 +188,12 @@ header{background:rgba(11,31,18,.98);border-bottom:1px solid var(--border);paddi
     <div id="loginBox">
       <h2>Transfer Impact Modul</h2>
       <p>Melden Sie sich an um auf die Länderprofile und vorausgefüllten TIA-Dokumente zuzugreifen.</p>
-      <input type="email" id="emailIn" class="ainput" placeholder="E-Mail-Adresse">
-      <input type="password" id="passIn" class="ainput" placeholder="Passwort">
+      <form onsubmit="event.preventDefault();doLogin();return false;" autocomplete="on">
+      <input type="email" id="emailIn" name="email" autocomplete="email" required class="ainput" placeholder="E-Mail-Adresse">
+      <input type="password" id="passIn" name="password" autocomplete="current-password" required class="ainput" placeholder="Passwort">
       <div class="aerr" id="aerr"></div>
-      <button class="abtn" onclick="doLogin()">Einloggen →</button>
+      <button type="submit" class="abtn">Einloggen →</button>
+      </form>
       <div class="adiv"></div>
       <div class="ainfo">Noch kein Zugang? <a href="https://buy.stripe.com/8x214f4d86FP5DTdjG5Rm06">Transfer Impact Modul — CHF 299 →</a></div>
     </div>
