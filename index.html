@@ -205,6 +205,16 @@ header{background:rgba(11,31,18,.98);border-bottom:1px solid var(--border);paddi
       <div class="adiv"></div>
       <div class="ainfo"><span style="cursor:pointer;color:var(--gold);" onclick="doLogout()">Anderes Konto</span></div>
     </div>
+    <div id="setPasswordBox" style="display:none">
+      <h2>Willkommen bei Zehnder Governance</h2>
+      <p>Legen Sie einmalig Ihr Passwort fest, um Ihren Portal-Zugang zu aktivieren.</p>
+      <form onsubmit="event.preventDefault();doSetPassword();return false;" autocomplete="on">
+      <input type="password" id="newPwInput" name="new-password" autocomplete="new-password" required minlength="8" class="ainput" placeholder="Neues Passwort (mind. 8 Zeichen)">
+      <input type="password" id="newPwInput2" name="new-password" autocomplete="new-password" required minlength="8" class="ainput" placeholder="Passwort wiederholen">
+      <div class="aerr" id="setPwErr"></div>
+      <button type="submit" class="abtn" id="setPwBtn">Passwort festlegen →</button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -359,6 +369,8 @@ const PLANS=['tia','standard','enterprise'];
 const {createClient}=supabase;
 const sb=createClient(SB_URL,SB_KEY);
 window.sb=sb;
+const _authHash=new URLSearchParams((window.location.hash||'').replace(/^#/,''));
+const NEEDS_PW_SETUP=_authHash.get('type')==='invite'||_authHash.get('type')==='recovery';
 
 // Country data
 const countries=[
@@ -540,6 +552,7 @@ function closeDetail(){
 
 // AUTH
 async function init(){
+  if(NEEDS_PW_SETUP){document.getElementById('loading').classList.add('gone');showSetPasswordBox();return;}
   const {data:{session}}=await sb.auth.getSession();
   if(session){document.getElementById('uemail').textContent=session.user.email;await checkAccess(session.user.id);}
   else{document.getElementById('loading').classList.add('gone');}
@@ -569,7 +582,26 @@ async function doLogout(){
   location.reload();
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function showSetPasswordBox(){
+  document.getElementById('auth').classList.remove('gone');
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('setPasswordBox').style.display='block';
+}
+async function doSetPassword(){
+  const p1=document.getElementById('newPwInput').value;
+  const p2=document.getElementById('newPwInput2').value;
+  const err=document.getElementById('setPwErr');
+  err.style.display='none';
+  if(p1.length<8){err.textContent='Passwort muss mindestens 8 Zeichen haben.';err.style.display='block';return;}
+  if(p1!==p2){err.textContent='Die Passwörter stimmen nicht überein.';err.style.display='block';return;}
+  const {error}=await sb.auth.updateUser({password:p1});
+  if(error){err.textContent='Konnte Passwort nicht speichern: '+error.message;err.style.display='block';return;}
+  document.getElementById('setPasswordBox').style.display='none';
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){document.getElementById('uemail').textContent=session.user.email;await checkAccess(session.user.id);}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('loginBox').style.display!=='none')doLogin();});
 init();
 </script>
 <!-- ZG Cookie Consent Banner v1 — Quick-Hinweis für technisch-notwendige Cookies (Supabase-Auth-Session) -->
