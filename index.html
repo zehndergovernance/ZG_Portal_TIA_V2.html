@@ -35,6 +35,7 @@ a{text-decoration:none;color:inherit;}
 .pwwrap{position:relative;}
 .pweye{position:absolute;right:10px;top:12px;background:none;border:0;padding:0;cursor:pointer;font-size:15px;line-height:1;opacity:.55;}
 .pweye:hover{opacity:.95;}
+.forgot-link{font-size:12px;color:var(--gold);cursor:pointer;margin-top:10px;display:inline-block;}
 .adiv{border:none;border-top:1px solid rgba(255,255,255,.08);margin:18px 0;}
 .ainfo{font-size:12px;color:rgba(255,255,255,.3);line-height:1.6;}
 .ainfo a{color:var(--gold);}
@@ -197,8 +198,14 @@ header{background:rgba(11,31,18,.98);border-bottom:1px solid var(--border);paddi
       <div class="aerr" id="aerr"></div>
       <button type="submit" class="abtn">Einloggen →</button>
       </form>
+      <span class="forgot-link" onclick="doForgotPassword()">Passwort vergessen?</span>
       <div class="adiv"></div>
       <div class="ainfo">Noch kein Zugang? <a href="https://buy.stripe.com/8x214f4d86FP5DTdjG5Rm06">Transfer Impact Modul — CHF 299 →</a></div>
+    </div>
+    <div id="resetBox" style="display:none;text-align:center;">
+      <div class="big">📧</div>
+      <h2>E-Mail unterwegs</h2>
+      <p>Falls ein Konto existiert, haben wir dir einen Link zum Zurücksetzen geschickt. Bitte prüfe dein Postfach (auch Spam).</p>
     </div>
     <div id="noBox" class="noaccess" style="display:none">
       <div class="big">🔒</div>
@@ -570,7 +577,7 @@ async function checkAccess(uid){
 }
 
 async function doLogin(){
-  const email=document.getElementById('emailIn').value.trim();
+  const email=document.getElementById('emailIn').value.trim().toLowerCase();
   const pw=document.getElementById('passIn').value;
   const err=document.getElementById('aerr');
   err.style.display='none';
@@ -583,6 +590,13 @@ async function doLogin(){
 async function doLogout(){
   await sb.auth.signOut();
   location.reload();
+}
+async function doForgotPassword(){
+  const email=document.getElementById('emailIn').value.trim().toLowerCase();
+  if(!email){alert('Bitte zuerst deine E-Mail-Adresse eingeben.');return;}
+  await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('resetBox').style.display='block';
 }
 
 function showSetPasswordBox(){
